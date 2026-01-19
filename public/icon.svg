@@ -1,30 +1,45 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- Background -->
+  <!-- Background - dark blue -->
   <rect width="32" height="32" fill="#1a1a2e"/>
 
-  <!-- Coin/Currency symbol - pixelated style -->
-  <rect x="8" y="4" width="16" height="2" fill="#ffd700"/>
-  <rect x="6" y="6" width="4" height="2" fill="#ffd700"/>
-  <rect x="22" y="6" width="4" height="2" fill="#ffd700"/>
-  <rect x="4" y="8" width="4" height="2" fill="#ffd700"/>
-  <rect x="24" y="8" width="4" height="2" fill="#ffd700"/>
-  <rect x="4" y="10" width="2" height="12" fill="#ffd700"/>
-  <rect x="26" y="10" width="2" height="12" fill="#ffd700"/>
-  <rect x="4" y="22" width="4" height="2" fill="#ffd700"/>
-  <rect x="24" y="22" width="4" height="2" fill="#ffd700"/>
-  <rect x="6" y="24" width="4" height="2" fill="#ffd700"/>
-  <rect x="22" y="24" width="4" height="2" fill="#ffd700"/>
-  <rect x="8" y="26" width="16" height="2" fill="#ffd700"/>
+  <!-- Central Gold Coin - outer ring -->
+  <rect x="9" y="5" width="14" height="2" fill="#ffd700"/>
+  <rect x="7" y="7" width="2" height="2" fill="#ffd700"/>
+  <rect x="23" y="7" width="2" height="2" fill="#ffd700"/>
+  <rect x="5" y="9" width="2" height="14" fill="#ffd700"/>
+  <rect x="25" y="9" width="2" height="14" fill="#ffd700"/>
+  <rect x="7" y="23" width="2" height="2" fill="#ffd700"/>
+  <rect x="23" y="23" width="2" height="2" fill="#ffd700"/>
+  <rect x="9" y="25" width="14" height="2" fill="#ffd700"/>
 
-  <!-- K letter in center -->
-  <rect x="10" y="10" width="2" height="12" fill="#e94560"/>
-  <rect x="12" y="14" width="2" height="2" fill="#e94560"/>
-  <rect x="14" y="12" width="2" height="2" fill="#e94560"/>
-  <rect x="16" y="10" width="2" height="2" fill="#e94560"/>
-  <rect x="14" y="16" width="2" height="2" fill="#e94560"/>
-  <rect x="16" y="18" width="2" height="2" fill="#e94560"/>
-  <rect x="18" y="20" width="2" height="2" fill="#e94560"/>
+  <!-- Coin inner fill - darker gold -->
+  <rect x="9" y="7" width="14" height="2" fill="#d4a847"/>
+  <rect x="7" y="9" width="18" height="14" fill="#d4a847"/>
+  <rect x="9" y="23" width="14" height="2" fill="#d4a847"/>
 
-  <!-- Shine effect -->
-  <rect x="6" y="8" width="2" height="2" fill="#fff" opacity="0.3"/>
+  <!-- Three Parts/Characters on coin -->
+  <!-- Left Part (blue) -->
+  <rect x="9" y="12" width="4" height="4" fill="#4a9eff"/>
+  <rect x="10" y="16" width="2" height="3" fill="#4a9eff"/>
+  <rect x="10" y="13" width="2" height="1" fill="#fff"/>
+
+  <!-- Center Part (pink/primary) -->
+  <rect x="14" y="10" width="4" height="4" fill="#e94560"/>
+  <rect x="15" y="14" width="2" height="4" fill="#e94560"/>
+  <rect x="15" y="11" width="2" height="1" fill="#fff"/>
+
+  <!-- Right Part (green) -->
+  <rect x="19" y="12" width="4" height="4" fill="#4ade80"/>
+  <rect x="20" y="16" width="2" height="3" fill="#4ade80"/>
+  <rect x="20" y="13" width="2" height="1" fill="#fff"/>
+
+  <!-- Coin shine -->
+  <rect x="7" y="9" width="2" height="2" fill="#fff" opacity="0.4"/>
+  <rect x="9" y="7" width="2" height="2" fill="#fff" opacity="0.2"/>
+
+  <!-- Small stars/sparkles around -->
+  <rect x="2" y="2" width="2" height="2" fill="#ffd700" opacity="0.6"/>
+  <rect x="28" y="4" width="2" height="2" fill="#ffd700" opacity="0.5"/>
+  <rect x="3" y="26" width="2" height="2" fill="#ffd700" opacity="0.4"/>
+  <rect x="27" y="27" width="2" height="2" fill="#ffd700" opacity="0.5"/>
 </svg>
