@@ -2,8 +2,15 @@ import { useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { useSettingsStore } from '../../store/settingsStore';
+import { useUIStore } from '../../store/uiStore';
 import { updatePart } from '../../sync/yjsProvider';
 import type { Part } from '../../models/types';
+
+// Helper to truncate error messages for display
+function truncateError(error: string, maxLen = 100): string {
+  if (error.length <= maxLen) return error;
+  return error.slice(0, maxLen) + '...';
+}
 
 interface EditAvatarModalProps {
   part: Part;
@@ -13,6 +20,7 @@ interface EditAvatarModalProps {
 
 export function EditAvatarModal({ part, isOpen, onClose }: EditAvatarModalProps) {
   const falApiKey = useSettingsStore((state) => state.falApiKey);
+  const showToast = useUIStore((state) => state.showToast);
 
   const [avatarPrompt, setAvatarPrompt] = useState(part.avatarPrompt || '');
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(part.avatarUrl);
@@ -71,8 +79,10 @@ export function EditAvatarModal({ part, isOpen, onClose }: EditAvatarModalProps)
         throw new Error('No image returned');
       }
     } catch (err) {
-      console.error('[Avatar] Generation failed:', err);
-      setError(err instanceof Error ? err.message : 'Generation failed');
+      const errorMsg = err instanceof Error ? err.message : 'Generation failed';
+      console.error('[Avatar] Generation failed:', errorMsg, err);
+      setError(truncateError(errorMsg));
+      showToast(`Avatar generation failed: ${truncateError(errorMsg, 80)}`, 'error', 8000);
     } finally {
       setIsGenerating(false);
     }

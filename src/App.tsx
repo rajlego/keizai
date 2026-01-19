@@ -16,6 +16,7 @@ import {
 import { CreatePartModal } from './components/parts/CreatePartModal';
 import { NewLoanModal, TaskModal } from './components/loans';
 import { TransferModal } from './components/common/TransferModal';
+import { ToastContainer } from './components/common';
 import type { View } from './models/types';
 
 const NAV_ITEMS: { view: View; label: string; key: string }[] = [
@@ -149,6 +150,9 @@ function App() {
       {isTransferModalOpen && (
         <TransferModal isOpen={isTransferModalOpen} onClose={closeTransferModal} />
       )}
+
+      {/* Toast Notifications */}
+      <ToastContainer />
     </div>
   );
 }

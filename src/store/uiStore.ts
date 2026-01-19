@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import type { View } from '../models/types';
 
+export interface Toast {
+  id: string;
+  message: string;
+  type: 'error' | 'success' | 'info';
+  duration?: number;
+}
+
 interface UIState {
   // Navigation
   currentView: View;
@@ -9,6 +16,11 @@ interface UIState {
   // Part selection
   selectedPartId: string | null;
   selectPart: (partId: string | null) => void;
+
+  // Toast notifications
+  toasts: Toast[];
+  showToast: (message: string, type?: Toast['type'], duration?: number) => void;
+  dismissToast: (id: string) => void;
 
   // Modal states
   isCreatePartModalOpen: boolean;
@@ -38,7 +50,7 @@ interface UIState {
   setInitialized: (initialized: boolean) => void;
 }
 
-export const useUIStore = create<UIState>((set) => ({
+export const useUIStore = create<UIState>((set, get) => ({
   // Navigation
   currentView: 'dashboard',
   setView: (view) => set({ currentView: view }),
@@ -46,6 +58,23 @@ export const useUIStore = create<UIState>((set) => ({
   // Part selection
   selectedPartId: null,
   selectPart: (partId) => set({ selectedPartId: partId }),
+
+  // Toast notifications
+  toasts: [],
+  showToast: (message, type = 'info', duration = 5000) => {
+    const id = `toast_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const toast: Toast = { id, message, type, duration };
+    set((state) => ({ toasts: [...state.toasts, toast] }));
+
+    if (duration > 0) {
+      setTimeout(() => {
+        get().dismissToast(id);
+      }, duration);
+    }
+  },
+  dismissToast: (id) => set((state) => ({
+    toasts: state.toasts.filter((t) => t.id !== id)
+  })),
 
   // Create Part Modal
   isCreatePartModalOpen: false,

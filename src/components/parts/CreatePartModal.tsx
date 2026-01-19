@@ -6,6 +6,12 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { addPart } from '../../sync/yjsProvider';
 import type { Part } from '../../models/types';
 
+// Helper to truncate error messages for display
+function truncateError(error: string, maxLen = 100): string {
+  if (error.length <= maxLen) return error;
+  return error.slice(0, maxLen) + '...';
+}
+
 // Simple UUID generator
 function generateId(): string {
   return 'part_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
@@ -16,6 +22,7 @@ export function CreatePartModal() {
   const closeModal = useUIStore((state) => state.closeCreatePartModal);
   const isGeneratingAvatar = useUIStore((state) => state.isGeneratingAvatar);
   const setGeneratingAvatar = useUIStore((state) => state.setGeneratingAvatar);
+  const showToast = useUIStore((state) => state.showToast);
 
   const startingBalance = useSettingsStore((state) => state.startingBalance);
   const startingCreditScore = useSettingsStore((state) => state.startingCreditScore);
@@ -79,8 +86,10 @@ export function CreatePartModal() {
         throw new Error('No image returned from API');
       }
     } catch (err) {
-      console.error('[Avatar] Generation failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate avatar');
+      const errorMsg = err instanceof Error ? err.message : 'Failed to generate avatar';
+      console.error('[Avatar] Generation failed:', errorMsg, err);
+      setError(truncateError(errorMsg));
+      showToast(`Avatar generation failed: ${truncateError(errorMsg, 80)}`, 'error', 8000);
     } finally {
       setGeneratingAvatar(false);
     }
