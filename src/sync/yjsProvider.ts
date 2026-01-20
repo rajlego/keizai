@@ -13,6 +13,9 @@ import type {
   PartGameState,
   PlayerState,
   GameState,
+  Battle,
+  BattleCharacter,
+  BattleAction,
 } from '../models/types';
 import { DEFAULT_SETTINGS } from '../models/types';
 
@@ -31,6 +34,10 @@ export const personalitiesMap = ydoc.getMap<PartPersonality>('personalities');
 export const conversationsMap = ydoc.getMap<Conversation>('conversations');
 export const relationshipsMap = ydoc.getMap<Relationship>('relationships');
 export const gameStateMap = ydoc.getMap<unknown>('gameState');
+
+// Data structures - Battle System
+export const battlesMap = ydoc.getMap<Battle>('battles');
+export const battleCharactersMap = ydoc.getMap<BattleCharacter>('battleCharacters');
 
 let localPersistence: IndexeddbPersistence | null = null;
 
@@ -430,6 +437,138 @@ export function onGameStateChange(callback: (state: GameState) => void): () => v
   return () => gameStateMap.unobserveDeep(handler);
 }
 
+// ============================================
+// BATTLE SYSTEM
+// ============================================
+
+export function getAllBattles(): Battle[] {
+  return Array.from(battlesMap.values());
+}
+
+export function getBattle(id: string): Battle | undefined {
+  return battlesMap.get(id);
+}
+
+export function getActiveBattle(): Battle | undefined {
+  return getAllBattles().find(b => b.status === 'active' || b.status === 'setup' || b.status === 'summoning');
+}
+
+export function addBattle(battle: Battle): void {
+  ydoc.transact(() => {
+    battlesMap.set(battle.id, battle);
+    // Also store the villain as a battle character
+    battleCharactersMap.set(battle.villain.id, battle.villain);
+    // Store all heroes
+    for (const hero of battle.heroes) {
+      battleCharactersMap.set(hero.id, hero);
+    }
+  });
+}
+
+export function updateBattle(id: string, updates: Partial<Battle>): void {
+  const existing = battlesMap.get(id);
+  if (!existing) return;
+
+  ydoc.transact(() => {
+    battlesMap.set(id, {
+      ...existing,
+      ...updates,
+    });
+  });
+}
+
+export function addActionToBattle(battleId: string, action: BattleAction): void {
+  const existing = battlesMap.get(battleId);
+  if (!existing) return;
+
+  ydoc.transact(() => {
+    battlesMap.set(battleId, {
+      ...existing,
+      actions: [...existing.actions, action],
+    });
+  });
+}
+
+export function addHeroToBattle(battleId: string, hero: BattleCharacter): void {
+  const existing = battlesMap.get(battleId);
+  if (!existing) return;
+
+  ydoc.transact(() => {
+    battleCharactersMap.set(hero.id, hero);
+    battlesMap.set(battleId, {
+      ...existing,
+      heroes: [...existing.heroes, hero],
+      turnOrder: [...existing.turnOrder, hero.id],
+    });
+  });
+}
+
+export function updateBattleCharacter(characterId: string, updates: Partial<BattleCharacter>): void {
+  const existing = battleCharactersMap.get(characterId);
+  if (!existing) return;
+
+  ydoc.transact(() => {
+    battleCharactersMap.set(characterId, {
+      ...existing,
+      ...updates,
+    });
+
+    // Also update in battle if this is a villain
+    for (const battle of getAllBattles()) {
+      if (battle.villain.id === characterId) {
+        battlesMap.set(battle.id, {
+          ...battle,
+          villain: { ...battle.villain, ...updates },
+        });
+      }
+      // Or if it's a hero
+      const heroIndex = battle.heroes.findIndex(h => h.id === characterId);
+      if (heroIndex >= 0) {
+        const updatedHeroes = [...battle.heroes];
+        updatedHeroes[heroIndex] = { ...updatedHeroes[heroIndex], ...updates };
+        battlesMap.set(battle.id, {
+          ...battle,
+          heroes: updatedHeroes,
+        });
+      }
+    }
+  });
+}
+
+export function deleteBattle(id: string): void {
+  const battle = battlesMap.get(id);
+  if (!battle) return;
+
+  ydoc.transact(() => {
+    // Delete associated characters
+    battleCharactersMap.delete(battle.villain.id);
+    for (const hero of battle.heroes) {
+      battleCharactersMap.delete(hero.id);
+    }
+    battlesMap.delete(id);
+  });
+}
+
+export function getAllBattleCharacters(): BattleCharacter[] {
+  return Array.from(battleCharactersMap.values());
+}
+
+export function getBattleCharacter(id: string): BattleCharacter | undefined {
+  return battleCharactersMap.get(id);
+}
+
+export function onBattlesChange(callback: (battles: Battle[]) => void): () => void {
+  const handler = () => callback(getAllBattles());
+  battlesMap.observeDeep(handler);
+  return () => battlesMap.unobserveDeep(handler);
+}
+
+export function onBattleCharactersChange(callback: (characters: BattleCharacter[]) => void): () => void {
+  const handler = () => callback(getAllBattleCharacters());
+  battleCharactersMap.observeDeep(handler);
+  return () => battleCharactersMap.unobserveDeep(handler);
+}
+
 // Clear all data (for testing/reset)
 export function clearAllData(): void {
   ydoc.transact(() => {
@@ -449,6 +588,10 @@ export function clearAllData(): void {
     conversationsMap.clear();
     relationshipsMap.clear();
     gameStateMap.clear();
+
+    // Battle data
+    battlesMap.clear();
+    battleCharactersMap.clear();
 
     initializeCentralBankIfNeeded();
   });

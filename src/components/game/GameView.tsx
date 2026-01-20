@@ -1,18 +1,31 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useParts } from '../../hooks/useParts';
+import { usePersonalities } from '../../hooks/usePersonalities';
 import { useGameStateActions } from '../../hooks/useGameState';
 import { HubView } from '../styles/persona-hub/HubView';
 import { VNView } from '../styles/visual-novel/VNView';
 import { RPGView } from '../styles/top-down/RPGView';
 import { PCView } from '../styles/point-click/PCView';
 import { GameStyleSelector } from './GameStyleSelector';
+import { BattleView } from '../battle';
 
 export function GameView() {
   const gameStyle = useSettingsStore((state) => state.gameStyle);
   const claudeApiKey = useSettingsStore((state) => state.claudeApiKey);
+  const falApiKey = useSettingsStore((state) => state.falApiKey);
   const parts = useParts();
+  const personalities = usePersonalities();
   const { initializePartStates } = useGameStateActions();
+  const [showBattle, setShowBattle] = useState(false);
+
+  // Combine parts with their personalities
+  const partsWithPersonalities = useMemo(() => {
+    return parts.map(part => ({
+      part,
+      personality: personalities.find(p => p.partId === part.id) ?? null,
+    }));
+  }, [parts, personalities]);
 
   // Initialize part states when parts change
   useEffect(() => {
@@ -80,11 +93,31 @@ export function GameView() {
     }
   };
 
+  // Show battle view if active
+  if (showBattle) {
+    return (
+      <div className="h-full">
+        <BattleView
+          parts={partsWithPersonalities}
+          apiKey={claudeApiKey}
+          falApiKey={falApiKey}
+          onClose={() => setShowBattle(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
-      {/* Style selector bar */}
-      <div className="flex-shrink-0 border-b-2 border-[var(--color-pixel-secondary)] bg-[var(--color-pixel-surface)] px-2 py-1">
+      {/* Style selector bar with battle button */}
+      <div className="flex-shrink-0 border-b-2 border-[var(--color-pixel-secondary)] bg-[var(--color-pixel-surface)] px-2 py-1 flex items-center justify-between">
         <GameStyleSelector />
+        <button
+          onClick={() => setShowBattle(true)}
+          className="px-3 py-1 text-[10px] bg-[var(--color-pixel-error)] text-white border-2 border-[var(--color-pixel-error)] hover:brightness-110"
+        >
+          Boss Battle
+        </button>
       </div>
 
       {/* Game content */}

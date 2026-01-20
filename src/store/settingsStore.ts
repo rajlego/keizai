@@ -17,6 +17,14 @@ interface SettingsState extends KeizaiSettings {
   // API Keys
   setFalApiKey: (key: string) => void;
   setClaudeApiKey: (key: string) => void;
+  setElevenLabsApiKey: (key: string) => void;
+
+  // Voice
+  setVoiceEnabled: (enabled: boolean) => void;
+  setVoiceVolume: (volume: number) => void;
+
+  // General update
+  updateSettings: (settings: Partial<KeizaiSettings>) => void;
 
   // Economy
   setBaseInterestRate: (rate: number) => void;
@@ -52,6 +60,14 @@ export const useSettingsStore = create<SettingsState>()(
       // API Keys
       setFalApiKey: (key) => set({ falApiKey: key }),
       setClaudeApiKey: (key) => set({ claudeApiKey: key }),
+      setElevenLabsApiKey: (key) => set({ elevenLabsApiKey: key }),
+
+      // Voice
+      setVoiceEnabled: (enabled) => set({ voiceEnabled: enabled }),
+      setVoiceVolume: (volume) => set({ voiceVolume: volume }),
+
+      // General update
+      updateSettings: (settings) => set(settings),
 
       // Economy
       setBaseInterestRate: (rate) => set({ baseInterestRate: rate }),

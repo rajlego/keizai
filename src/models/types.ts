@@ -149,6 +149,11 @@ export interface KeizaiSettings {
   // API Keys
   falApiKey?: string;
   claudeApiKey?: string;
+  elevenLabsApiKey?: string;
+
+  // Voice settings
+  voiceEnabled: boolean;
+  voiceVolume: number;
 
   // Game settings
   gameStyle: GameStyle;
@@ -179,6 +184,10 @@ export const DEFAULT_SETTINGS: KeizaiSettings = {
 
   // Sync
   cloudSyncEnabled: false,
+
+  // Voice
+  voiceEnabled: false,
+  voiceVolume: 1.0,
 
   // Game
   gameStyle: 'persona-hub',
@@ -301,3 +310,220 @@ export interface GameState {
   activeConversationId: string | null;
   isDialogueOpen: boolean;
 }
+
+// ============================================
+// BATTLE SYSTEM TYPES
+// ============================================
+
+// Hero archetype categories (Fate-inspired)
+export type HeroArchetype =
+  | 'saber'      // Noble warrior, direct confrontation
+  | 'archer'     // Strategic, long-range support
+  | 'lancer'     // Aggressive, breakthrough specialist
+  | 'caster'     // Wise, insight/magic based
+  | 'rider'      // Adaptive, journey-focused
+  | 'assassin'   // Precision, shadow work
+  | 'berserker'  // Raw power, emotional intensity
+  | 'shielder'   // Protection, boundaries
+  | 'ruler'      // Balance, judgment, integration
+  | 'custom';    // AI-generated or historical figure
+
+// Battle character (villain, hero, or part)
+export interface BattleCharacter {
+  id: string;
+  name: string;
+  role: 'villain' | 'hero' | 'part';
+  archetype?: HeroArchetype;
+
+  // Stats
+  health: number;
+  maxHealth: number;
+  understanding: number;  // For integration victory (0-100)
+  trust: number;          // For negotiation victory (0-100)
+
+  // Personality
+  description: string;
+  traits: string[];
+  coreNeed: string;
+  speechStyle: string;
+
+  // Links
+  partId?: string;        // If role='part', links to user's Part
+  historicalFigure?: string;
+
+  // Generated assets
+  avatarUrl?: string;
+  avatarPrompt?: string;
+  voiceId?: string;       // ElevenLabs voice ID
+
+  createdAt: string;
+}
+
+// Battle action types
+export type BattleActionType =
+  | 'attack'      // Direct confrontation, damages HP
+  | 'defend'      // Protect self/ally
+  | 'support'     // Buff ally, heal, encourage
+  | 'negotiate'   // Try to reach agreement (+trust)
+  | 'understand'  // Explore villain's need (+understanding)
+  | 'special';    // Archetype-specific ability
+
+export interface BattleAction {
+  id: string;
+  round: number;
+  characterId: string;
+  targetId?: string;
+  actionType: BattleActionType;
+  dialogue: string;       // What they say
+  narration: string;      // What happens
+
+  // Effects
+  damage?: number;
+  healing?: number;
+  trustDelta?: number;
+  understandingDelta?: number;
+
+  timestamp: string;
+}
+
+// Victory types
+export type VictoryType =
+  | 'hp_depletion'   // Villain HP reaches 0
+  | 'integration'    // Understanding reaches 100
+  | 'negotiation'    // Trust reaches 100
+  | 'defeat'         // All heroes/parts defeated
+  | 'flee';          // User chose to retreat
+
+// Battle status
+export type BattleStatus = 'setup' | 'summoning' | 'active' | 'paused' | 'completed';
+
+// Main battle state
+export interface Battle {
+  id: string;
+
+  // Setup
+  scenario: string;
+  scenarioAnalysis?: string;
+
+  // Participants
+  villain: BattleCharacter;
+  heroes: BattleCharacter[];
+  partIds: string[];        // User's parts involved
+
+  // State
+  status: BattleStatus;
+  currentRound: number;
+  currentActorId: string;
+  turnOrder: string[];
+
+  // Battle log
+  actions: BattleAction[];
+  conversationId: string;
+
+  // Outcome
+  victoryType?: VictoryType;
+  rewards?: BattleReward[];
+
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface BattleReward {
+  type: 'xp' | 'currency' | 'ability' | 'insight';
+  partId?: string;
+  amount?: number;
+  description: string;
+}
+
+// Hero archetype definitions
+export interface HeroArchetypeDefinition {
+  name: string;
+  description: string;
+  traits: string[];
+  specialAbility: string;
+  voiceStyle: string;
+  avatarPrompt: string;
+}
+
+export const HERO_ARCHETYPES: Record<HeroArchetype, HeroArchetypeDefinition> = {
+  saber: {
+    name: 'Saber',
+    description: 'Noble warrior who faces challenges with honor and directness',
+    traits: ['noble', 'direct', 'honorable', 'protective'],
+    specialAbility: 'Excalibur Strike - powerful direct confrontation that cuts through denial',
+    voiceStyle: 'commanding yet compassionate',
+    avatarPrompt: 'noble knight in shining armor, sword raised, determined expression, pixel art style',
+  },
+  archer: {
+    name: 'Archer',
+    description: 'Strategic thinker who sees the bigger picture and hidden patterns',
+    traits: ['analytical', 'patient', 'precise', 'independent'],
+    specialAbility: 'Unlimited Insight - reveal hidden truths and motivations',
+    voiceStyle: 'calm and measured with dry wit',
+    avatarPrompt: 'mysterious archer in red cloak, analytical gaze, bow drawn, pixel art style',
+  },
+  lancer: {
+    name: 'Lancer',
+    description: 'Aggressive breakthrough specialist who pushes through obstacles',
+    traits: ['aggressive', 'passionate', 'loyal', 'impulsive'],
+    specialAbility: 'Gae Bolg - pierce through defenses and reach the heart of the matter',
+    voiceStyle: 'energetic and passionate, with fierce loyalty',
+    avatarPrompt: 'fierce warrior with long spear, dynamic pose, intense eyes, pixel art style',
+  },
+  caster: {
+    name: 'Caster',
+    description: 'Wise sage who uses knowledge and insight as power',
+    traits: ['wise', 'knowledgeable', 'patient', 'nurturing'],
+    specialAbility: 'Territory of Understanding - create safe space for dialogue',
+    voiceStyle: 'gentle and wise, like a caring mentor',
+    avatarPrompt: 'wise mage with flowing robes, staff with glowing crystal, kind eyes, pixel art style',
+  },
+  rider: {
+    name: 'Rider',
+    description: 'Adaptive traveler who navigates journeys and transformations',
+    traits: ['adaptive', 'charismatic', 'adventurous', 'free-spirited'],
+    specialAbility: 'Gordian Wheel - navigate through complex situations with ease',
+    voiceStyle: 'confident and adventurous, inspiring courage',
+    avatarPrompt: 'charismatic rider on mystical mount, windswept hair, adventurous spirit, pixel art style',
+  },
+  assassin: {
+    name: 'Assassin',
+    description: 'Precision specialist who does shadow work and reveals hidden truths',
+    traits: ['stealthy', 'observant', 'patient', 'precise'],
+    specialAbility: 'Presence Concealment - work on subconscious patterns unseen',
+    voiceStyle: 'quiet and precise, speaking only when necessary',
+    avatarPrompt: 'shadowy figure in dark cloak, piercing eyes, mysterious aura, pixel art style',
+  },
+  berserker: {
+    name: 'Berserker',
+    description: 'Raw power who channels emotional intensity into transformative force',
+    traits: ['powerful', 'emotional', 'primal', 'unstoppable'],
+    specialAbility: 'Mad Enhancement - overwhelming emotional breakthrough',
+    voiceStyle: 'intense and raw, speaking from pure emotion',
+    avatarPrompt: 'powerful berserker with wild hair, glowing eyes, raw emotional energy, pixel art style',
+  },
+  shielder: {
+    name: 'Shielder',
+    description: 'Guardian who creates safety and maintains boundaries',
+    traits: ['protective', 'steadfast', 'patient', 'selfless'],
+    specialAbility: 'Lord Camelot - impenetrable emotional shield',
+    voiceStyle: 'warm and reassuring, steady presence',
+    avatarPrompt: 'armored guardian with massive shield, protective stance, gentle face, pixel art style',
+  },
+  ruler: {
+    name: 'Ruler',
+    description: 'Arbiter of balance who seeks integration and fairness',
+    traits: ['balanced', 'fair', 'integrative', 'authoritative'],
+    specialAbility: 'True Judgment - facilitate understanding between all parties',
+    voiceStyle: 'authoritative but fair, mediator tone',
+    avatarPrompt: 'regal figure in ceremonial robes, scales of justice, serene expression, pixel art style',
+  },
+  custom: {
+    name: 'Custom',
+    description: 'Unique hero generated for this specific battle',
+    traits: [],
+    specialAbility: 'Unique ability based on their nature',
+    voiceStyle: 'varies based on character',
+    avatarPrompt: 'heroic figure, unique design, pixel art style',
+  },
+};
