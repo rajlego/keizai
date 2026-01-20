@@ -3,6 +3,13 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { KeizaiSettings, GameStyle } from '../models/types';
 import { DEFAULT_SETTINGS } from '../models/types';
 
+// Load API keys from environment variables (fallback defaults)
+const ENV_API_KEYS = {
+  claudeApiKey: import.meta.env.VITE_OPENROUTER_API_KEY ?? '',
+  falApiKey: import.meta.env.VITE_FAL_API_KEY ?? '',
+  elevenLabsApiKey: import.meta.env.VITE_ELEVENLABS_API_KEY ?? '',
+};
+
 interface SettingsState extends KeizaiSettings {
   // Appearance
   setTheme: (theme: KeizaiSettings['theme']) => void;
@@ -87,6 +94,18 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: 'keizai-settings',
       storage: createJSONStorage(() => localStorage),
+      // Merge stored state with env variables - env vars are used if stored value is empty
+      merge: (persistedState, currentState) => {
+        const state = persistedState as Partial<KeizaiSettings> | undefined;
+        return {
+          ...currentState,
+          ...state,
+          // Use env variable if stored value is empty/undefined
+          claudeApiKey: state?.claudeApiKey || ENV_API_KEYS.claudeApiKey,
+          falApiKey: state?.falApiKey || ENV_API_KEYS.falApiKey,
+          elevenLabsApiKey: state?.elevenLabsApiKey || ENV_API_KEYS.elevenLabsApiKey,
+        };
+      },
     }
   )
 );
