@@ -1,17 +1,36 @@
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
-import type { Part, Loan, Commitment, Transaction, CentralBank, CreditScoreEvent } from '../models/types';
+import type {
+  Part,
+  Loan,
+  Commitment,
+  Transaction,
+  CentralBank,
+  CreditScoreEvent,
+  PartPersonality,
+  Conversation,
+  Relationship,
+  PartGameState,
+  PlayerState,
+  GameState,
+} from '../models/types';
 import { DEFAULT_SETTINGS } from '../models/types';
 
 // Single Yjs document - source of truth for all synced data
 export const ydoc = new Y.Doc();
 
-// Data structures
+// Data structures - Core
 export const partsMap = ydoc.getMap<Part>('parts');
 export const loansMap = ydoc.getMap<Loan>('loans');
 export const transactionsArray = ydoc.getArray<Transaction>('transactions');
 export const centralBankMap = ydoc.getMap<unknown>('centralBank');
 export const creditEventsArray = ydoc.getArray<CreditScoreEvent>('creditEvents');
+
+// Data structures - Game System
+export const personalitiesMap = ydoc.getMap<PartPersonality>('personalities');
+export const conversationsMap = ydoc.getMap<Conversation>('conversations');
+export const relationshipsMap = ydoc.getMap<Relationship>('relationships');
+export const gameStateMap = ydoc.getMap<unknown>('gameState');
 
 let localPersistence: IndexeddbPersistence | null = null;
 
@@ -179,9 +198,242 @@ export function onCentralBankChange(callback: (bank: CentralBank) => void): () =
   return () => centralBankMap.unobserveDeep(handler);
 }
 
+// ============================================
+// GAME SYSTEM - Personalities
+// ============================================
+
+export function getAllPersonalities(): PartPersonality[] {
+  return Array.from(personalitiesMap.values());
+}
+
+export function getPersonality(partId: string): PartPersonality | undefined {
+  return personalitiesMap.get(partId);
+}
+
+export function setPersonality(personality: PartPersonality): void {
+  ydoc.transact(() => {
+    personalitiesMap.set(personality.partId, personality);
+  });
+}
+
+export function updatePersonality(partId: string, updates: Partial<PartPersonality>): void {
+  const existing = personalitiesMap.get(partId);
+  if (!existing) return;
+
+  ydoc.transact(() => {
+    personalitiesMap.set(partId, {
+      ...existing,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    });
+  });
+}
+
+export function deletePersonality(partId: string): void {
+  ydoc.transact(() => {
+    personalitiesMap.delete(partId);
+  });
+}
+
+export function onPersonalitiesChange(callback: (personalities: PartPersonality[]) => void): () => void {
+  const handler = () => callback(getAllPersonalities());
+  personalitiesMap.observeDeep(handler);
+  return () => personalitiesMap.unobserveDeep(handler);
+}
+
+// ============================================
+// GAME SYSTEM - Conversations
+// ============================================
+
+export function getAllConversations(): Conversation[] {
+  return Array.from(conversationsMap.values());
+}
+
+export function getConversation(id: string): Conversation | undefined {
+  return conversationsMap.get(id);
+}
+
+export function getConversationsForPart(partId: string): Conversation[] {
+  return getAllConversations().filter(c => c.participantIds.includes(partId));
+}
+
+export function addConversation(conversation: Conversation): void {
+  ydoc.transact(() => {
+    conversationsMap.set(conversation.id, conversation);
+  });
+}
+
+export function updateConversation(id: string, updates: Partial<Conversation>): void {
+  const existing = conversationsMap.get(id);
+  if (!existing) return;
+
+  ydoc.transact(() => {
+    conversationsMap.set(id, {
+      ...existing,
+      ...updates,
+      lastMessageAt: new Date().toISOString(),
+    });
+  });
+}
+
+export function addMessageToConversation(conversationId: string, message: Conversation['messages'][0]): void {
+  const existing = conversationsMap.get(conversationId);
+  if (!existing) return;
+
+  ydoc.transact(() => {
+    conversationsMap.set(conversationId, {
+      ...existing,
+      messages: [...existing.messages, message],
+      lastMessageAt: new Date().toISOString(),
+    });
+  });
+}
+
+export function deleteConversation(id: string): void {
+  ydoc.transact(() => {
+    conversationsMap.delete(id);
+  });
+}
+
+export function onConversationsChange(callback: (conversations: Conversation[]) => void): () => void {
+  const handler = () => callback(getAllConversations());
+  conversationsMap.observeDeep(handler);
+  return () => conversationsMap.unobserveDeep(handler);
+}
+
+// ============================================
+// GAME SYSTEM - Relationships
+// ============================================
+
+export function getAllRelationships(): Relationship[] {
+  return Array.from(relationshipsMap.values());
+}
+
+export function getRelationship(partId: string): Relationship | undefined {
+  return relationshipsMap.get(partId);
+}
+
+export function setRelationship(relationship: Relationship): void {
+  ydoc.transact(() => {
+    relationshipsMap.set(relationship.partId, relationship);
+  });
+}
+
+export function updateRelationship(partId: string, updates: Partial<Relationship>): void {
+  const existing = relationshipsMap.get(partId);
+  if (!existing) return;
+
+  ydoc.transact(() => {
+    relationshipsMap.set(partId, {
+      ...existing,
+      ...updates,
+      lastInteractionAt: new Date().toISOString(),
+    });
+  });
+}
+
+export function addRelationshipXP(partId: string, xp: number): void {
+  const existing = relationshipsMap.get(partId);
+  if (!existing) return;
+
+  ydoc.transact(() => {
+    relationshipsMap.set(partId, {
+      ...existing,
+      experience: existing.experience + xp,
+      lastInteractionAt: new Date().toISOString(),
+    });
+  });
+}
+
+export function deleteRelationship(partId: string): void {
+  ydoc.transact(() => {
+    relationshipsMap.delete(partId);
+  });
+}
+
+export function onRelationshipsChange(callback: (relationships: Relationship[]) => void): () => void {
+  const handler = () => callback(getAllRelationships());
+  relationshipsMap.observeDeep(handler);
+  return () => relationshipsMap.unobserveDeep(handler);
+}
+
+// ============================================
+// GAME SYSTEM - Game State
+// ============================================
+
+const DEFAULT_PLAYER_STATE: PlayerState = {
+  position: { x: 50, y: 50 },
+  currentScene: 'hub',
+  inventory: [],
+};
+
+export function getGameState(): GameState {
+  return {
+    playerState: (gameStateMap.get('playerState') as PlayerState) ?? DEFAULT_PLAYER_STATE,
+    partStates: (gameStateMap.get('partStates') as PartGameState[]) ?? [],
+    activeConversationId: (gameStateMap.get('activeConversationId') as string | null) ?? null,
+    isDialogueOpen: (gameStateMap.get('isDialogueOpen') as boolean) ?? false,
+  };
+}
+
+export function updateGameState(updates: Partial<GameState>): void {
+  ydoc.transact(() => {
+    if (updates.playerState !== undefined) gameStateMap.set('playerState', updates.playerState);
+    if (updates.partStates !== undefined) gameStateMap.set('partStates', updates.partStates);
+    if (updates.activeConversationId !== undefined) gameStateMap.set('activeConversationId', updates.activeConversationId);
+    if (updates.isDialogueOpen !== undefined) gameStateMap.set('isDialogueOpen', updates.isDialogueOpen);
+  });
+}
+
+export function updatePlayerPosition(x: number, y: number): void {
+  const current = getGameState();
+  updateGameState({
+    playerState: {
+      ...current.playerState,
+      position: { x, y },
+    },
+  });
+}
+
+export function setActiveConversation(conversationId: string | null): void {
+  updateGameState({
+    activeConversationId: conversationId,
+    isDialogueOpen: conversationId !== null,
+  });
+}
+
+export function updatePartGameState(partId: string, updates: Partial<PartGameState>): void {
+  const current = getGameState();
+  const partStates = [...current.partStates];
+  const index = partStates.findIndex(ps => ps.partId === partId);
+
+  if (index >= 0) {
+    partStates[index] = { ...partStates[index], ...updates };
+  } else {
+    // Create new part game state
+    partStates.push({
+      partId,
+      position: { x: Math.random() * 80 + 10, y: Math.random() * 60 + 20 },
+      mood: 'neutral',
+      expression: 'default',
+      isAvailable: true,
+      ...updates,
+    });
+  }
+
+  updateGameState({ partStates });
+}
+
+export function onGameStateChange(callback: (state: GameState) => void): () => void {
+  const handler = () => callback(getGameState());
+  gameStateMap.observeDeep(handler);
+  return () => gameStateMap.unobserveDeep(handler);
+}
+
 // Clear all data (for testing/reset)
 export function clearAllData(): void {
   ydoc.transact(() => {
+    // Core data
     partsMap.clear();
     loansMap.clear();
     while (transactionsArray.length > 0) {
@@ -191,6 +443,13 @@ export function clearAllData(): void {
       creditEventsArray.delete(0, creditEventsArray.length);
     }
     centralBankMap.clear();
+
+    // Game data
+    personalitiesMap.clear();
+    conversationsMap.clear();
+    relationshipsMap.clear();
+    gameStateMap.clear();
+
     initializeCentralBankIfNeeded();
   });
 }
