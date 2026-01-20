@@ -1,9 +1,12 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import type { Part, PartPersonality, Relationship, Commitment, ConversationMessage } from '../../models/types';
 import { buildSystemPrompt, buildChoicesPrompt, buildDebatePrompt, buildPersonalityGenerationPrompt, type PartContext } from './prompts';
 
-// Default model to use
-const DEFAULT_MODEL = 'claude-sonnet-4-20250514';
+// OpenRouter API base URL
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+
+// Default model to use (Claude Sonnet via OpenRouter)
+const DEFAULT_MODEL = 'anthropic/claude-sonnet-4';
 
 // LLM service configuration
 export interface LLMConfig {
@@ -12,11 +15,16 @@ export interface LLMConfig {
   maxTokens?: number;
 }
 
-// Create Anthropic client
-function createClient(apiKey: string): Anthropic {
-  return new Anthropic({
+// Create OpenRouter client (OpenAI-compatible)
+function createClient(apiKey: string): OpenAI {
+  return new OpenAI({
     apiKey,
-    dangerouslyAllowBrowser: true, // Required for browser usage
+    baseURL: OPENROUTER_BASE_URL,
+    dangerouslyAllowBrowser: true,
+    defaultHeaders: {
+      'HTTP-Referer': 'https://keizai.app',
+      'X-Title': 'Keizai IFS Game',
+    },
   });
 }
 
@@ -47,18 +55,16 @@ export async function chat(
   const systemPrompt = buildSystemPrompt(context);
 
   try {
-    const response = await client.messages.create({
+    const response = await client.chat.completions.create({
       model: config.model ?? DEFAULT_MODEL,
       max_tokens: config.maxTokens ?? 300,
-      system: systemPrompt,
       messages: [
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ],
     });
 
-    // Extract text from response
-    const textBlock = response.content.find(block => block.type === 'text');
-    return textBlock?.type === 'text' ? textBlock.text : '';
+    return response.choices[0]?.message?.content ?? '';
   } catch (error) {
     console.error('[LLM] Chat error:', error);
     throw error;
@@ -75,18 +81,20 @@ export async function* chatStream(
   const systemPrompt = buildSystemPrompt(context);
 
   try {
-    const stream = await client.messages.stream({
+    const stream = await client.chat.completions.create({
       model: config.model ?? DEFAULT_MODEL,
       max_tokens: config.maxTokens ?? 300,
-      system: systemPrompt,
+      stream: true,
       messages: [
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ],
     });
 
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        yield event.delta.text;
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content;
+      if (content) {
+        yield content;
       }
     }
   } catch (error) {
@@ -105,7 +113,7 @@ export async function generateChoices(
   const prompt = buildChoicesPrompt(partMessage, context);
 
   try {
-    const response = await client.messages.create({
+    const response = await client.chat.completions.create({
       model: config.model ?? DEFAULT_MODEL,
       max_tokens: 200,
       messages: [
@@ -113,8 +121,7 @@ export async function generateChoices(
       ],
     });
 
-    const textBlock = response.content.find(block => block.type === 'text');
-    const text = textBlock?.type === 'text' ? textBlock.text : '[]';
+    const text = response.choices[0]?.message?.content ?? '[]';
 
     // Parse JSON array from response
     const jsonMatch = text.match(/\[[\s\S]*\]/);
@@ -152,7 +159,7 @@ export async function* debate(
       : prompt;
 
     try {
-      const response = await client.messages.create({
+      const response = await client.chat.completions.create({
         model: config.model ?? DEFAULT_MODEL,
         max_tokens: 150,
         messages: [
@@ -160,8 +167,7 @@ export async function* debate(
         ],
       });
 
-      const textBlock = response.content.find(block => block.type === 'text');
-      const content = textBlock?.type === 'text' ? textBlock.text : '';
+      const content = response.choices[0]?.message?.content ?? '';
 
       history.push(`${context.part.name}: ${content}`);
 
@@ -188,7 +194,7 @@ export async function generatePersonality(
   const prompt = buildPersonalityGenerationPrompt(part);
 
   try {
-    const response = await client.messages.create({
+    const response = await client.chat.completions.create({
       model: config.model ?? DEFAULT_MODEL,
       max_tokens: 200,
       messages: [
@@ -196,8 +202,7 @@ export async function generatePersonality(
       ],
     });
 
-    const textBlock = response.content.find(block => block.type === 'text');
-    const text = textBlock?.type === 'text' ? textBlock.text : '{}';
+    const text = response.choices[0]?.message?.content ?? '{}';
 
     // Parse JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -230,7 +235,7 @@ export async function generatePersonality(
 export async function testApiKey(apiKey: string): Promise<boolean> {
   try {
     const client = createClient(apiKey);
-    await client.messages.create({
+    await client.chat.completions.create({
       model: DEFAULT_MODEL,
       max_tokens: 10,
       messages: [{ role: 'user', content: 'Hello' }],

@@ -1,0 +1,1 @@
+export { PersonalityEditor } from './PersonalityEditor';

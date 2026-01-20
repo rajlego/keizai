@@ -119,7 +119,7 @@ export function HubView() {
       {/* LLM not available warning */}
       {!isAvailable && (
         <div className="absolute top-2 right-2 text-[9px] text-[var(--color-pixel-warning)] bg-[var(--color-pixel-bg)]/80 px-2 py-1 border border-[var(--color-pixel-warning)]">
-          ⚠️ Set Claude API key in Settings
+          ⚠️ Set OpenRouter API key in Settings
         </div>
       )}
     </div>

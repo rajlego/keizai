@@ -516,14 +516,14 @@ export function SettingsView() {
           {/* Claude API Key */}
           <div>
             <label className="block text-[10px] text-[var(--color-pixel-text-dim)] mb-1">
-              Claude API Key (for character conversations)
+              OpenRouter API Key (for character conversations)
             </label>
             <div className="flex gap-2">
               <input
                 type={showClaudeApiKey ? 'text' : 'password'}
                 value={claudeApiKey || ''}
                 onChange={(e) => setClaudeApiKey(e.target.value)}
-                placeholder="Enter your Claude API key..."
+                placeholder="Enter your OpenRouter API key..."
                 className="flex-1 px-3 py-2 bg-[var(--color-pixel-bg)] border-2 border-[#888] text-[var(--color-pixel-text)] text-[12px] focus:border-[var(--color-pixel-accent)] focus:outline-none"
               />
               <Button
@@ -537,12 +537,12 @@ export function SettingsView() {
             <p className="text-[8px] text-[var(--color-pixel-text-dim)] mt-1">
               Get your API key from{' '}
               <a
-                href="https://console.anthropic.com/"
+                href="https://openrouter.ai/keys"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[var(--color-pixel-accent)] hover:underline"
               >
-                console.anthropic.com
+                openrouter.ai/keys
               </a>
             </p>
           </div>
