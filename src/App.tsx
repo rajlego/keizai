@@ -13,6 +13,7 @@ import {
   HistoryView,
   SettingsView,
 } from './components/views';
+import { GameView } from './components/game';
 import { CreatePartModal } from './components/parts/CreatePartModal';
 import { NewLoanModal, TaskModal } from './components/loans';
 import { TransferModal } from './components/common/TransferModal';
@@ -21,10 +22,11 @@ import type { View } from './models/types';
 
 const NAV_ITEMS: { view: View; label: string; key: string }[] = [
   { view: 'dashboard', label: 'Home', key: '1' },
-  { view: 'parts', label: 'Parts', key: '2' },
-  { view: 'commitments', label: 'Commits', key: '3' },
-  { view: 'bank', label: 'Bank', key: '4' },
-  { view: 'history', label: 'Log', key: '5' },
+  { view: 'game', label: 'Game', key: '2' },
+  { view: 'parts', label: 'Parts', key: '3' },
+  { view: 'commitments', label: 'Commits', key: '4' },
+  { view: 'bank', label: 'Bank', key: '5' },
+  { view: 'history', label: 'Log', key: '6' },
   { view: 'settings', label: 'Cfg', key: '0' },
 ];
 
@@ -90,6 +92,7 @@ function App() {
   function renderView() {
     switch (currentView) {
       case 'dashboard': return <DashboardView />;
+      case 'game': return <GameView />;
       case 'parts': return <PartsView />;
       case 'commitments': return <LoansView />;
       case 'bank': return <BankView />;

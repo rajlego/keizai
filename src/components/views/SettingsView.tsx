@@ -5,7 +5,7 @@ import { getAllParts, getAllCommitments, getAllTransactions, getCentralBank, cle
 import { isFirebaseConfigured } from '../../sync/firebaseConfig';
 import { startSync, stopSync, onSyncStatusChange, type SyncStatus } from '../../sync/firebaseSync';
 import { signInWithEmail, signUpWithEmail, signInWithGoogle, signOut, onAuthStateChanged, parseAuthError, type User } from '../../services/auth';
-import type { Part, Commitment, Transaction, CentralBank, KeizaiSettings } from '../../models/types';
+import type { Part, Commitment, Transaction, CentralBank, KeizaiSettings, GameStyle } from '../../models/types';
 
 interface ExportData {
   version: number;
@@ -20,6 +20,7 @@ interface ExportData {
 export function SettingsView() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showClaudeApiKey, setShowClaudeApiKey] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
@@ -63,6 +64,14 @@ export function SettingsView() {
   const falApiKey = useSettingsStore((state) => state.falApiKey);
   const theme = useSettingsStore((state) => state.theme);
 
+  // Game settings
+  const claudeApiKey = useSettingsStore((state) => state.claudeApiKey);
+  const gameStyle = useSettingsStore((state) => state.gameStyle);
+  const autoGeneratePersonalities = useSettingsStore((state) => state.autoGeneratePersonalities);
+  const showRelationshipLevels = useSettingsStore((state) => state.showRelationshipLevels);
+  const enablePartInitiatedConversations = useSettingsStore((state) => state.enablePartInitiatedConversations);
+  const narratorEnabled = useSettingsStore((state) => state.narratorEnabled);
+
   const setNotificationsEnabled = useSettingsStore((state) => state.setNotificationsEnabled);
   const setAggressiveNotifications = useSettingsStore((state) => state.setAggressiveNotifications);
   const setCloudSyncEnabled = useSettingsStore((state) => state.setCloudSyncEnabled);
@@ -72,6 +81,14 @@ export function SettingsView() {
   const setFalApiKey = useSettingsStore((state) => state.setFalApiKey);
   const setTheme = useSettingsStore((state) => state.setTheme);
   const resetToDefaults = useSettingsStore((state) => state.resetToDefaults);
+
+  // Game settings setters
+  const setClaudeApiKey = useSettingsStore((state) => state.setClaudeApiKey);
+  const setGameStyle = useSettingsStore((state) => state.setGameStyle);
+  const setAutoGeneratePersonalities = useSettingsStore((state) => state.setAutoGeneratePersonalities);
+  const setShowRelationshipLevels = useSettingsStore((state) => state.setShowRelationshipLevels);
+  const setEnablePartInitiatedConversations = useSettingsStore((state) => state.setEnablePartInitiatedConversations);
+  const setNarratorEnabled = useSettingsStore((state) => state.setNarratorEnabled);
 
   // Auth handlers
   const handleSignIn = async () => {
@@ -486,6 +503,193 @@ export function SettingsView() {
               max={100}
               className="w-full px-3 py-2 bg-[var(--color-pixel-bg)] border-2 border-[#888] text-[var(--color-pixel-text)] text-[12px] focus:border-[var(--color-pixel-accent)] focus:outline-none"
             />
+          </div>
+        </div>
+      </Card>
+
+      {/* Game Settings Section */}
+      <Card>
+        <h2 className="text-[14px] text-[var(--color-pixel-accent)] mb-4">
+          Game Settings
+        </h2>
+        <div className="space-y-4">
+          {/* Claude API Key */}
+          <div>
+            <label className="block text-[10px] text-[var(--color-pixel-text-dim)] mb-1">
+              Claude API Key (for character conversations)
+            </label>
+            <div className="flex gap-2">
+              <input
+                type={showClaudeApiKey ? 'text' : 'password'}
+                value={claudeApiKey || ''}
+                onChange={(e) => setClaudeApiKey(e.target.value)}
+                placeholder="Enter your Claude API key..."
+                className="flex-1 px-3 py-2 bg-[var(--color-pixel-bg)] border-2 border-[#888] text-[var(--color-pixel-text)] text-[12px] focus:border-[var(--color-pixel-accent)] focus:outline-none"
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowClaudeApiKey(!showClaudeApiKey)}
+              >
+                {showClaudeApiKey ? 'Hide' : 'Show'}
+              </Button>
+            </div>
+            <p className="text-[8px] text-[var(--color-pixel-text-dim)] mt-1">
+              Get your API key from{' '}
+              <a
+                href="https://console.anthropic.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--color-pixel-accent)] hover:underline"
+              >
+                console.anthropic.com
+              </a>
+            </p>
+          </div>
+
+          {/* Game Style Selector */}
+          <div>
+            <label className="block text-[10px] text-[var(--color-pixel-text-dim)] mb-2">
+              Game Style
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { value: 'persona-hub', label: 'Persona Hub', icon: '🏠' },
+                { value: 'visual-novel', label: 'Visual Novel', icon: '📖' },
+                { value: 'top-down-rpg', label: 'Top-Down RPG', icon: '🎮' },
+                { value: 'point-click', label: 'Point & Click', icon: '🖱️' },
+              ] as const).map((style) => (
+                <button
+                  key={style.value}
+                  onClick={() => setGameStyle(style.value as GameStyle)}
+                  className={`
+                    px-3 py-2 border-2 text-[10px] transition-colors text-left
+                    ${gameStyle === style.value
+                      ? 'bg-[var(--color-pixel-accent)] border-[var(--color-pixel-accent)] text-black'
+                      : 'bg-transparent border-[#888] text-[var(--color-pixel-text)] hover:border-[var(--color-pixel-accent)]'
+                    }
+                  `}
+                >
+                  <span className="mr-1">{style.icon}</span>
+                  {style.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Game Toggles */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[12px] text-[var(--color-pixel-text)]">
+                  Auto-generate Personalities
+                </p>
+                <p className="text-[10px] text-[var(--color-pixel-text-dim)]">
+                  Create personality for new parts automatically
+                </p>
+              </div>
+              <button
+                onClick={() => setAutoGeneratePersonalities(!autoGeneratePersonalities)}
+                className={`
+                  w-12 h-6 border-2 transition-colors relative
+                  ${autoGeneratePersonalities
+                    ? 'bg-[var(--color-pixel-success)] border-[var(--color-pixel-success)]'
+                    : 'bg-[var(--color-pixel-bg)] border-[#888]'
+                  }
+                `}
+              >
+                <div
+                  className={`
+                    w-4 h-4 bg-white absolute top-0.5 transition-transform
+                    ${autoGeneratePersonalities ? 'translate-x-6' : 'translate-x-0.5'}
+                  `}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[12px] text-[var(--color-pixel-text)]">
+                  Show Relationship Levels
+                </p>
+                <p className="text-[10px] text-[var(--color-pixel-text-dim)]">
+                  Display social link progress in game
+                </p>
+              </div>
+              <button
+                onClick={() => setShowRelationshipLevels(!showRelationshipLevels)}
+                className={`
+                  w-12 h-6 border-2 transition-colors relative
+                  ${showRelationshipLevels
+                    ? 'bg-[var(--color-pixel-success)] border-[var(--color-pixel-success)]'
+                    : 'bg-[var(--color-pixel-bg)] border-[#888]'
+                  }
+                `}
+              >
+                <div
+                  className={`
+                    w-4 h-4 bg-white absolute top-0.5 transition-transform
+                    ${showRelationshipLevels ? 'translate-x-6' : 'translate-x-0.5'}
+                  `}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[12px] text-[var(--color-pixel-text)]">
+                  Part-initiated Conversations
+                </p>
+                <p className="text-[10px] text-[var(--color-pixel-text-dim)]">
+                  Parts can request to talk with you
+                </p>
+              </div>
+              <button
+                onClick={() => setEnablePartInitiatedConversations(!enablePartInitiatedConversations)}
+                className={`
+                  w-12 h-6 border-2 transition-colors relative
+                  ${enablePartInitiatedConversations
+                    ? 'bg-[var(--color-pixel-success)] border-[var(--color-pixel-success)]'
+                    : 'bg-[var(--color-pixel-bg)] border-[#888]'
+                  }
+                `}
+              >
+                <div
+                  className={`
+                    w-4 h-4 bg-white absolute top-0.5 transition-transform
+                    ${enablePartInitiatedConversations ? 'translate-x-6' : 'translate-x-0.5'}
+                  `}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[12px] text-[var(--color-pixel-text)]">
+                  Enable Narrator
+                </p>
+                <p className="text-[10px] text-[var(--color-pixel-text-dim)]">
+                  Show narrator text in visual novel mode
+                </p>
+              </div>
+              <button
+                onClick={() => setNarratorEnabled(!narratorEnabled)}
+                className={`
+                  w-12 h-6 border-2 transition-colors relative
+                  ${narratorEnabled
+                    ? 'bg-[var(--color-pixel-success)] border-[var(--color-pixel-success)]'
+                    : 'bg-[var(--color-pixel-bg)] border-[#888]'
+                  }
+                `}
+              >
+                <div
+                  className={`
+                    w-4 h-4 bg-white absolute top-0.5 transition-transform
+                    ${narratorEnabled ? 'translate-x-6' : 'translate-x-0.5'}
+                  `}
+                />
+              </button>
+            </div>
           </div>
         </div>
       </Card>
