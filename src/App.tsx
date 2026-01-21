@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { useUIStore } from './store/uiStore';
+import { useSettingsStore } from './store/settingsStore';
 import { useKeyboard } from './hooks/useKeyboard';
 import { useNotification } from './hooks/useNotification';
 import { initLocalPersistence } from './sync/yjsProvider';
-import { regenerateBankFunds } from './services/centralBank';
+import { startBankRegenChecker } from './services/centralBank';
 import { startDeadlineChecker } from './services/deadlines';
+import { startPartRegenChecker } from './services/partRegeneration';
 import {
   DashboardView,
   PartsView,
@@ -14,6 +16,8 @@ import {
   SettingsView,
 } from './components/views';
 import { GameView } from './components/game';
+import { JournalView } from './components/journal';
+import { WritingView } from './components/writing/WritingView';
 import { CreatePartModal } from './components/parts/CreatePartModal';
 import { NewLoanModal, TaskModal } from './components/loans';
 import { TransferModal } from './components/common/TransferModal';
@@ -23,10 +27,12 @@ import type { View } from './models/types';
 const NAV_ITEMS: { view: View; label: string; key: string }[] = [
   { view: 'dashboard', label: 'Home', key: '1' },
   { view: 'game', label: 'Game', key: '2' },
-  { view: 'parts', label: 'Parts', key: '3' },
-  { view: 'commitments', label: 'Commits', key: '4' },
-  { view: 'bank', label: 'Bank', key: '5' },
-  { view: 'history', label: 'Log', key: '6' },
+  { view: 'writing', label: 'Write', key: '3' },
+  { view: 'journal', label: 'Journal', key: '4' },
+  { view: 'parts', label: 'Parts', key: '5' },
+  { view: 'commitments', label: 'Commits', key: '6' },
+  { view: 'bank', label: 'Bank', key: '7' },
+  { view: 'history', label: 'Log', key: '8' },
   { view: 'settings', label: 'Cfg', key: '0' },
 ];
 
@@ -40,6 +46,12 @@ function App() {
   const isTaskModalOpen = useUIStore((s) => s.isTaskModalOpen);
   const isTransferModalOpen = useUIStore((s) => s.isTransferModalOpen);
   const closeTransferModal = useUIStore((s) => s.closeTransferModal);
+  const theme = useSettingsStore((s) => s.theme);
+
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // Initialize keyboard shortcuts
   useKeyboard();
@@ -50,15 +62,22 @@ function App() {
   // Initialize app
   useEffect(() => {
     let stopDeadlineChecker: (() => void) | null = null;
+    let stopPartRegenChecker: (() => void) | null = null;
+    let stopBankRegenChecker: (() => void) | null = null;
 
     async function init() {
       try {
         await initLocalPersistence();
-        regenerateBankFunds();
         await requestNotificationPermission();
 
         // Start deadline checker
         stopDeadlineChecker = startDeadlineChecker();
+
+        // Start per-part trust regeneration checker (hourly)
+        stopPartRegenChecker = startPartRegenChecker(60);
+
+        // Start central bank regeneration checker (hourly)
+        stopBankRegenChecker = startBankRegenChecker(60);
 
         setInitialized(true);
         console.log('[Keizai] App initialized');
@@ -72,6 +91,12 @@ function App() {
     return () => {
       if (stopDeadlineChecker) {
         stopDeadlineChecker();
+      }
+      if (stopPartRegenChecker) {
+        stopPartRegenChecker();
+      }
+      if (stopBankRegenChecker) {
+        stopBankRegenChecker();
       }
     };
   }, [setInitialized, requestNotificationPermission]);
@@ -93,6 +118,8 @@ function App() {
     switch (currentView) {
       case 'dashboard': return <DashboardView />;
       case 'game': return <GameView />;
+      case 'writing': return <WritingView />;
+      case 'journal': return <JournalView />;
       case 'parts': return <PartsView />;
       case 'commitments': return <LoansView />;
       case 'bank': return <BankView />;

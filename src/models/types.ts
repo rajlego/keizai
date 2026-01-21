@@ -6,7 +6,7 @@ export type TransactionType =
   | 'bonus'
   | 'penalty';
 
-export type View = 'dashboard' | 'game' | 'parts' | 'commitments' | 'bank' | 'history' | 'settings';
+export type View = 'dashboard' | 'game' | 'parts' | 'commitments' | 'bank' | 'history' | 'settings' | 'journal' | 'writing';
 
 // Game style options
 export type GameStyle = 'visual-novel' | 'persona-hub' | 'top-down-rpg' | 'point-click';
@@ -36,6 +36,8 @@ export interface Part {
   creditScore: number;
   createdAt: string;
   updatedAt: string;
+  // Trust regeneration
+  lastTrustRegenAt?: string; // Timestamp of last trust regeneration
 }
 
 // Commitment Task - things a part commits to doing
@@ -134,6 +136,9 @@ export interface KeizaiSettings {
   startingCreditScore: number;
   minCreditScore: number;
   maxCreditScore: number;
+  // Per-part trust regeneration
+  enablePartTrustRegen: boolean;
+  partTrustRegenRate: number; // Credits per hour per part
 
   // Notification settings
   notificationsEnabled: boolean;
@@ -141,7 +146,7 @@ export interface KeizaiSettings {
   aggressiveNotifications: boolean;
 
   // Appearance settings
-  theme: 'pixel' | 'cozy' | 'dark' | 'light';
+  theme: 'pixel' | 'skyrim' | 'cozy' | 'dark' | 'light';
 
   // Sync settings
   cloudSyncEnabled: boolean;
@@ -173,6 +178,9 @@ export const DEFAULT_SETTINGS: KeizaiSettings = {
   startingCreditScore: 650,
   minCreditScore: 300,
   maxCreditScore: 850,
+  // Per-part trust regeneration
+  enablePartTrustRegen: true,
+  partTrustRegenRate: 5, // 5 credits per hour per part
 
   // Notifications
   notificationsEnabled: true,
@@ -527,3 +535,161 @@ export const HERO_ARCHETYPES: Record<HeroArchetype, HeroArchetypeDefinition> = {
     avatarPrompt: 'heroic figure, unique design, pixel art style',
   },
 };
+
+// ============================================
+// CHARACTER EVOLUTION SYSTEM
+// ============================================
+
+// Categories for character insights
+export type InsightCategory =
+  | 'fear'         // What the character fears
+  | 'need'         // Core needs and desires
+  | 'strength'     // Positive qualities discovered
+  | 'trigger'      // What activates this part
+  | 'history'      // Backstory elements
+  | 'relationship' // Relationships with other parts
+  | 'growth';      // Personal development moments
+
+// Source of the insight
+export type InsightSource = 'conversation' | 'battle' | 'journal' | 'manual';
+
+// An insight learned about a character from conversations
+export interface CharacterInsight {
+  id: string;
+  characterType: 'part' | 'hero' | 'villain';
+  characterId: string;       // Part ID, hero name, or villain ID
+  characterName: string;
+
+  // The insight content
+  insight: string;           // "Fears being abandoned when others succeed"
+  source: InsightSource;
+  sourceId?: string;         // Conversation ID, battle ID, journal entry ID
+
+  // Categorization
+  category: InsightCategory;
+
+  createdAt: string;
+  confirmedByUser: boolean;  // User can confirm or reject AI-generated insights
+}
+
+// Character profile that evolves over time
+export interface CharacterProfile {
+  characterType: 'part' | 'hero';
+  characterId: string;
+  characterName: string;
+
+  // Core stable info (from original definition)
+  baseDescription: string;
+  baseTraits: string[];
+
+  // Evolving info (updated from insights)
+  evolvedDescription?: string;    // AI-generated synthesis of insights
+  discoveredTraits: string[];     // New traits discovered through conversations
+  insightIds: string[];           // IDs of related CharacterInsight entries
+
+  lastUpdatedAt: string;
+}
+
+// ============================================
+// IFS DIALOG JOURNAL SYSTEM
+// ============================================
+
+// Hero categories for organizing available heroes
+export type HeroCategory =
+  | 'philosophers'
+  | 'mythology'
+  | 'warriors'
+  | 'healers'
+  | 'literary'
+  | 'modern';
+
+// A line of dialog in a journal entry
+export interface JournalDialogLine {
+  id: string;
+  speaker: 'user' | 'part';
+  partId?: string;           // If speaker is 'part'
+  partName?: string;         // Display name
+  content: string;
+  emotion?: string;          // "frustrated", "scared", "hopeful"
+}
+
+// Advice from a hero consulted in the journal
+export interface HeroAdvice {
+  id: string;
+  heroName: string;          // "Marcus Aurelius", "Athena", etc.
+  heroCategory: HeroCategory;
+
+  // The advice
+  advice: string;            // The hero's response in character
+  keyInsight: string;        // One-line summary
+  suggestedAction?: string;  // Practical suggestion
+
+  // Metadata
+  requestedAt: string;
+  helpful?: boolean;         // User feedback
+}
+
+// A journal entry with IFS dialog
+export interface JournalEntry {
+  id: string;
+  title: string;
+
+  // The user-written dialog
+  dialog: JournalDialogLine[];
+
+  // Context/description
+  situation?: string;        // "I was feeling overwhelmed at work..."
+  question?: string;         // "How can I resolve this conflict?"
+
+  // Hero consultations
+  heroAdvice: HeroAdvice[];
+
+  // Outcomes
+  resolution?: string;       // User's reflection on what they learned
+  insightIds: string[];      // CharacterInsight IDs generated from this entry
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================
+// WRITING MODE - Freeform writing with hero commentary
+// ============================================
+
+// Commentary from a hero on user's writing
+export interface HeroCommentary {
+  id: string;
+  heroName: string;
+  heroCategory: HeroCategory;
+
+  // The commentary content
+  commentary: string;       // The hero's thoughts on the writing (2-3 paragraphs)
+  highlightedQuote?: string; // A specific quote from the writing they're responding to
+  keyReflection: string;    // One sentence summary of their main point
+  questionToConsider?: string; // A question for the writer to ponder
+
+  // Metadata
+  requestedAt: string;
+  helpful?: boolean;        // User feedback
+}
+
+// A writing entry - freeform journaling/logging
+export interface WritingEntry {
+  id: string;
+  title: string;
+
+  // The actual writing
+  content: string;          // Freeform text content
+  wordCount: number;        // Tracked for stats
+
+  // Optional metadata
+  mood?: string;            // How the writer was feeling
+  tags?: string[];          // User-defined tags
+
+  // Hero commentaries
+  commentaries: HeroCommentary[];
+
+  // Timestamps
+  createdAt: string;
+  updatedAt: string;
+}
